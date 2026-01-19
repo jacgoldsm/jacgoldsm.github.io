@@ -12,6 +12,8 @@
     let data = null;
     let yearStart = 1791;
     let yearEnd = 2024;
+    let selectedJustices = null; // null = all justices, Set = explicit selection
+    let minCases = 1;
 
     // DOM elements
     const loadingEl = document.getElementById('loading');
@@ -23,6 +25,16 @@
     const yearEndDisplay = document.getElementById('year-end-display');
     const justiceCountEl = document.getElementById('justice-count');
     const caseCountEl = document.getElementById('case-count');
+
+    // Filter DOM elements
+    const dropdownToggle = document.getElementById('dropdown-toggle');
+    const dropdownMenu = document.getElementById('dropdown-menu');
+    const dropdownLabel = document.getElementById('dropdown-label');
+    const dropdownOptions = document.getElementById('dropdown-options');
+    const justiceSearch = document.getElementById('justice-search');
+    const selectAllBtn = document.getElementById('select-all');
+    const clearAllBtn = document.getElementById('clear-all');
+    const minCasesInput = document.getElementById('min-cases');
 
     // Configuration
     const config = {
@@ -84,9 +96,9 @@
     }
 
     /**
-     * Get justices who participated in the filtered cases, sorted by inauguration (first term)
+     * Get all justices in the filtered cases (for dropdown population)
      */
-    function getActiveJustices(cases) {
+    function getAllJusticesInRange(cases) {
         const justiceSet = new Set();
         for (const c of cases) {
             for (const justice of Object.keys(c.votes)) {
@@ -101,6 +113,134 @@
             if (aFirst !== bFirst) return aFirst - bFirst;
             return a.localeCompare(b);
         });
+    }
+
+    /**
+     * Count cases per justice in filtered cases
+     */
+    function countCasesPerJustice(cases) {
+        const counts = {};
+        for (const c of cases) {
+            for (const justice of Object.keys(c.votes)) {
+                counts[justice] = (counts[justice] || 0) + 1;
+            }
+        }
+        return counts;
+    }
+
+    /**
+     * Populate the justice dropdown with checkboxes
+     */
+    function populateJusticeDropdown(cases) {
+        const justices = getAllJusticesInRange(cases);
+        const caseCounts = countCasesPerJustice(cases);
+
+        dropdownOptions.innerHTML = '';
+
+        for (const justiceId of justices) {
+            const info = data.justices[justiceId];
+            const name = info?.name || justiceId;
+            const count = caseCounts[justiceId] || 0;
+
+            const div = document.createElement('div');
+            div.className = 'dropdown-option';
+            div.dataset.justiceId = justiceId;
+            div.dataset.name = name.toLowerCase();
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `justice-${justiceId}`;
+            checkbox.checked = selectedJustices === null || selectedJustices.has(justiceId);
+            checkbox.addEventListener('change', () => handleJusticeToggle(justiceId, checkbox.checked));
+
+            const label = document.createElement('label');
+            label.htmlFor = `justice-${justiceId}`;
+            label.textContent = name;
+
+            const countSpan = document.createElement('span');
+            countSpan.className = 'case-count';
+            countSpan.textContent = `${count} cases`;
+
+            div.appendChild(checkbox);
+            div.appendChild(label);
+            div.appendChild(countSpan);
+
+            // Click on row toggles checkbox
+            div.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    handleJusticeToggle(justiceId, checkbox.checked);
+                }
+            });
+
+            dropdownOptions.appendChild(div);
+        }
+
+        updateDropdownLabel();
+    }
+
+    /**
+     * Handle justice checkbox toggle
+     */
+    function handleJusticeToggle(justiceId, checked) {
+        const allJustices = getAllJusticesInRange(filterCases());
+
+        if (checked) {
+            if (selectedJustices === null) {
+                // Was "all", checking one doesn't change anything
+                return;
+            } else {
+                selectedJustices.add(justiceId);
+            }
+        } else {
+            if (selectedJustices === null) {
+                // Was "all", now need to create set with all EXCEPT this one
+                selectedJustices = new Set(allJustices.filter(j => j !== justiceId));
+            } else {
+                selectedJustices.delete(justiceId);
+            }
+        }
+
+        // If all are now selected, reset to null (meaning "all")
+        if (selectedJustices && selectedJustices.size === allJustices.length) {
+            selectedJustices = null;
+        }
+
+        updateDropdownLabel();
+        renderMatrix();
+    }
+
+    /**
+     * Update dropdown button label
+     */
+    function updateDropdownLabel() {
+        const allJustices = getAllJusticesInRange(filterCases());
+        if (selectedJustices === null) {
+            dropdownLabel.textContent = 'All Justices';
+        } else if (selectedJustices.size === 0) {
+            dropdownLabel.textContent = 'No Justices Selected';
+        } else if (selectedJustices.size === 1) {
+            const justiceId = Array.from(selectedJustices)[0];
+            const name = data.justices[justiceId]?.name || justiceId;
+            dropdownLabel.textContent = name;
+        } else {
+            dropdownLabel.textContent = `${selectedJustices.size} of ${allJustices.length} Justices`;
+        }
+    }
+
+    /**
+     * Get justices who participated in the filtered cases, sorted by inauguration (first term)
+     * Applies the justice filter if set
+     */
+    function getActiveJustices(cases) {
+        const allJustices = getAllJusticesInRange(cases);
+
+        // Apply justice filter
+        if (selectedJustices === null) {
+            return allJustices;
+        } else {
+            return allJustices.filter(j => selectedJustices.has(j));
+        }
     }
 
     /**
@@ -205,6 +345,10 @@
         matrixEl.innerHTML = '';
 
         const cases = filterCases();
+
+        // Populate the justice dropdown with current time range
+        populateJusticeDropdown(cases);
+
         const justices = getActiveJustices(cases);
         const matrix = calculateConcurrence(cases, justices);
 
@@ -218,10 +362,11 @@
         }
 
         // Calculate min/max concurrence rates for dynamic color scale
+        // Only consider cells that meet the minimum cases threshold
         let minRate = 1, maxRate = 0;
         for (let i = 0; i < justices.length; i++) {
             for (let j = 0; j < justices.length; j++) {
-                if (i !== j && matrix[i][j].rate !== null) {
+                if (i !== j && matrix[i][j].rate !== null && matrix[i][j].total >= minCases) {
                     minRate = Math.min(minRate, matrix[i][j].rate);
                     maxRate = Math.max(maxRate, matrix[i][j].rate);
                 }
@@ -271,7 +416,7 @@
                 if (i === j) {
                     rect.classed('diagonal', true)
                         .attr('fill', colorScale(maxRate));
-                } else if (cell.rate === null) {
+                } else if (cell.rate === null || cell.total < minCases) {
                     rect.classed('no-overlap', true);
                 } else {
                     rect.attr('fill', colorScale(cell.rate));
@@ -331,11 +476,13 @@
                     <span class="value">${data.justices[justice1]?.firstTerm || '?'} - ${data.justices[justice1]?.lastTerm || '?'}</span>
                 </div>
             `;
-        } else if (cell.rate === null) {
+        } else if (cell.rate === null || cell.total < minCases) {
+            const reason = cell.total === 0 ? 'No overlapping cases' :
+                `Only ${cell.total} case${cell.total === 1 ? '' : 's'} (min: ${minCases})`;
             content = `
                 <div class="tooltip-title">${name1} & ${name2}</div>
                 <div class="tooltip-row">
-                    <span>No overlapping cases</span>
+                    <span>${reason}</span>
                 </div>
             `;
         } else {
@@ -413,11 +560,90 @@
             yearStartDisplay.textContent = yearStart;
             yearEndDisplay.textContent = yearEnd;
 
+            // Clean up selected justices that are no longer in range
+            if (selectedJustices !== null) {
+                const cases = filterCases();
+                const justicesInRange = new Set(getAllJusticesInRange(cases));
+                for (const j of Array.from(selectedJustices)) {
+                    if (!justicesInRange.has(j)) {
+                        selectedJustices.delete(j);
+                    }
+                }
+                // If all remaining justices are selected, reset to null
+                if (selectedJustices.size === justicesInRange.size) {
+                    selectedJustices = null;
+                }
+            }
+
             renderMatrix();
         }
 
         yearStartSlider.addEventListener('input', updateSliders);
         yearEndSlider.addEventListener('input', updateSliders);
+    }
+
+    /**
+     * Setup justice filter dropdown
+     */
+    function setupJusticeDropdown() {
+        // Toggle dropdown
+        dropdownToggle.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.justice-dropdown')) {
+                dropdownMenu.classList.remove('open');
+            }
+        });
+
+        // Search filter
+        justiceSearch.addEventListener('input', () => {
+            const query = justiceSearch.value.toLowerCase();
+            const options = dropdownOptions.querySelectorAll('.dropdown-option');
+            for (const opt of options) {
+                const name = opt.dataset.name;
+                if (name.includes(query)) {
+                    opt.classList.remove('hidden');
+                } else {
+                    opt.classList.add('hidden');
+                }
+            }
+        });
+
+        // Select all
+        selectAllBtn.addEventListener('click', () => {
+            selectedJustices = null;
+            const checkboxes = dropdownOptions.querySelectorAll('input[type="checkbox"]');
+            for (const cb of checkboxes) {
+                cb.checked = true;
+            }
+            updateDropdownLabel();
+            renderMatrix();
+        });
+
+        // Clear all
+        clearAllBtn.addEventListener('click', () => {
+            selectedJustices = new Set();
+            const checkboxes = dropdownOptions.querySelectorAll('input[type="checkbox"]');
+            for (const cb of checkboxes) {
+                cb.checked = false;
+            }
+            updateDropdownLabel();
+            renderMatrix();
+        });
+    }
+
+    /**
+     * Setup minimum cases filter
+     */
+    function setupMinCasesFilter() {
+        minCasesInput.addEventListener('input', () => {
+            const val = parseInt(minCasesInput.value, 10);
+            minCases = isNaN(val) || val < 1 ? 1 : val;
+            renderMatrix();
+        });
     }
 
     /**
@@ -438,6 +664,8 @@
      */
     function init() {
         setupSliders();
+        setupJusticeDropdown();
+        setupMinCasesFilter();
         setupResize();
         loadData();
     }

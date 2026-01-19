@@ -78,6 +78,7 @@ header .subtitle {
 
 .slider-wrapper input[type="range"] {
     position: absolute;
+    top: 10px;
     width: 100%;
     height: 8px;
     -webkit-appearance: none;
@@ -86,9 +87,17 @@ header .subtitle {
     pointer-events: none;
 }
 
-.slider-wrapper input[type="range"]::-webkit-slider-runnable-track {
+/* First slider shows the track */
+.slider-wrapper input[type="range"]#year-start::-webkit-slider-runnable-track {
     height: 8px;
     background: var(--border-color);
+    border-radius: 4px;
+}
+
+/* Second slider hides its track */
+.slider-wrapper input[type="range"]#year-end::-webkit-slider-runnable-track {
+    height: 8px;
+    background: transparent;
     border-radius: 4px;
 }
 
@@ -104,15 +113,25 @@ header .subtitle {
     margin-top: -6px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     transition: transform 0.15s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .slider-wrapper input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.1);
 }
 
-.slider-wrapper input[type="range"]::-moz-range-track {
+/* First slider shows the track (Firefox) */
+.slider-wrapper input[type="range"]#year-start::-moz-range-track {
     height: 8px;
     background: var(--border-color);
+    border-radius: 4px;
+}
+
+/* Second slider hides its track (Firefox) */
+.slider-wrapper input[type="range"]#year-end::-moz-range-track {
+    height: 8px;
+    background: transparent;
     border-radius: 4px;
 }
 
@@ -329,6 +348,194 @@ footer .citation {
     color: var(--text-muted);
 }
 
+/* Filter Controls */
+.filter-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.filter-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Justice Dropdown */
+.justice-dropdown {
+    position: relative;
+}
+
+.dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 200px;
+    justify-content: space-between;
+    transition: border-color 0.15s ease;
+}
+
+.dropdown-toggle:hover {
+    border-color: var(--accent-color);
+}
+
+.dropdown-arrow {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-top: 4px;
+    min-width: 280px;
+    max-height: 400px;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.dropdown-menu.open {
+    display: flex;
+}
+
+.dropdown-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-actions button {
+    flex: 1;
+    padding: 6px 12px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dropdown-actions button:hover {
+    background: var(--border-color);
+    color: var(--text-color);
+}
+
+.dropdown-search {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-search input {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.dropdown-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.dropdown-search input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.dropdown-options {
+    overflow-y: auto;
+    max-height: 300px;
+    padding: 4px 0;
+}
+
+.dropdown-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dropdown-option:hover {
+    background: var(--surface-color);
+}
+
+.dropdown-option.hidden {
+    display: none;
+}
+
+.dropdown-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.dropdown-option label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.dropdown-option .case-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Minimum Cases Input */
+.min-cases-input {
+    width: 80px;
+    padding: 8px 10px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.min-cases-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.min-cases-input::-webkit-inner-spin-button,
+.min-cases-input::-webkit-outer-spin-button {
+    opacity: 1;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     header h1 {
@@ -349,5 +556,18 @@ footer .citation {
 
     .legend-gradient {
         width: 150px;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .filter-group {
+        flex-wrap: wrap;
+    }
+
+    .dropdown-toggle {
+        min-width: 180px;
     }
 }

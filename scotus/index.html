@@ -27,6 +27,37 @@
                     <span id="year-end-display">2024</span>
                 </div>
             </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="justice-filter">Filter Justices:</label>
+                    <div class="justice-dropdown" id="justice-dropdown">
+                        <button type="button" class="dropdown-toggle" id="dropdown-toggle">
+                            <span id="dropdown-label">All Justices</span>
+                            <span class="dropdown-arrow">&#9662;</span>
+                        </button>
+                        <div class="dropdown-menu" id="dropdown-menu">
+                            <div class="dropdown-actions">
+                                <button type="button" id="select-all">Select All</button>
+                                <button type="button" id="clear-all">Clear All</button>
+                            </div>
+                            <div class="dropdown-search">
+                                <input type="text" id="justice-search" placeholder="Search justices...">
+                            </div>
+                            <div class="dropdown-options" id="dropdown-options">
+                                <!-- Options populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="min-cases">Minimum Cases:</label>
+                    <input type="number" id="min-cases" min="1" value="1" class="min-cases-input">
+                    <span class="filter-hint">per justice pair</span>
+                </div>
+            </div>
+
             <div class="stats" id="stats">
                 <span id="justice-count">0 justices</span>
                 <span class="stat-separator">|</span>
