@@ -1,0 +1,353 @@
+/* SCOTUS Justice Concurrence Matrix - Styles */
+
+:root {
+    --bg-color: #1a1a2e;
+    --surface-color: #16213e;
+    --text-color: #e8e8e8;
+    --text-muted: #a0a0a0;
+    --accent-color: #4a90d9;
+    --border-color: #2a3a5e;
+    --low-concurrence: #d32f2f;
+    --mid-concurrence: #f5f5f5;
+    --high-concurrence: #388e3c;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-color);
+}
+
+header .subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+/* Controls */
+.controls {
+    background: var(--surface-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.slider-container {
+    margin-bottom: 16px;
+}
+
+.slider-container label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 12px;
+    color: var(--text-color);
+}
+
+.slider-wrapper {
+    position: relative;
+    height: 40px;
+    margin-bottom: 8px;
+}
+
+.slider-wrapper input[type="range"] {
+    position: absolute;
+    width: 100%;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    pointer-events: none;
+}
+
+.slider-wrapper input[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.slider-wrapper input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    pointer-events: auto;
+    margin-top: -6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform 0.15s ease;
+}
+
+.slider-wrapper input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.slider-wrapper input[type="range"]::-moz-range-track {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.slider-wrapper input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    pointer-events: auto;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.year-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+.year-separator {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 1rem;
+}
+
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.stat-separator {
+    color: var(--border-color);
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--surface-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.legend-label {
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.legend-gradient {
+    width: 200px;
+    height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(to right, var(--low-concurrence), var(--mid-concurrence), var(--high-concurrence));
+}
+
+.legend-labels {
+    display: flex;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.legend-labels span:nth-child(2) {
+    margin: 0 40px;
+}
+
+/* Matrix Container */
+.matrix-container {
+    background: var(--surface-color);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    overflow: auto;
+    min-height: 400px;
+    position: relative;
+}
+
+#loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-muted);
+    font-size: 1.2rem;
+}
+
+#loading.hidden {
+    display: none;
+}
+
+#matrix {
+    display: flex;
+    justify-content: center;
+}
+
+#matrix svg {
+    font-family: inherit;
+}
+
+/* Matrix cell styling */
+.matrix-cell {
+    stroke: var(--surface-color);
+    stroke-width: 1px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.matrix-cell:hover {
+    opacity: 0.8;
+}
+
+.matrix-cell.diagonal {
+    stroke: var(--accent-color);
+    stroke-width: 2px;
+}
+
+.matrix-cell.no-overlap {
+    fill: var(--border-color) !important;
+}
+
+/* Axis labels */
+.axis-label {
+    font-size: 10px;
+    fill: var(--text-muted);
+    cursor: default;
+}
+
+.axis-label:hover {
+    fill: var(--text-color);
+}
+
+/* Tooltip */
+.tooltip {
+    position: fixed;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 1000;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.tooltip.visible {
+    opacity: 1;
+}
+
+.tooltip-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-color);
+}
+
+.tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--text-muted);
+}
+
+.tooltip-row .value {
+    color: var(--accent-color);
+    font-weight: 500;
+}
+
+.tooltip-row.highlight .value {
+    font-size: 1.1rem;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+footer a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+footer small {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.8rem;
+}
+
+footer .citation {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .controls {
+        padding: 16px;
+    }
+
+    .year-display {
+        font-size: 1.2rem;
+    }
+
+    .legend {
+        flex-wrap: wrap;
+    }
+
+    .legend-gradient {
+        width: 150px;
+    }
+}

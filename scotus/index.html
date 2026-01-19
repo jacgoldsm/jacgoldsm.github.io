@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOTUS Justice Concurrence Matrix</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Supreme Court Justice Concurrence Matrix</h1>
+            <p class="subtitle">Visualizing voting agreement between US Supreme Court Justices (1791-Present)</p>
+        </header>
+
+        <div class="controls">
+            <div class="slider-container">
+                <label for="year-range">Term Year Range:</label>
+                <div class="slider-wrapper">
+                    <input type="range" id="year-start" min="1791" max="2024" value="1791">
+                    <input type="range" id="year-end" min="1791" max="2024" value="2024">
+                </div>
+                <div class="year-display">
+                    <span id="year-start-display">1791</span>
+                    <span class="year-separator">to</span>
+                    <span id="year-end-display">2024</span>
+                </div>
+            </div>
+            <div class="stats" id="stats">
+                <span id="justice-count">0 justices</span>
+                <span class="stat-separator">|</span>
+                <span id="case-count">0 cases</span>
+            </div>
+        </div>
+
+        <div class="legend">
+            <span class="legend-label">Concurrence Rate:</span>
+            <div class="legend-gradient" id="legend-gradient"></div>
+            <div class="legend-labels">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
+            </div>
+        </div>
+
+        <div class="matrix-container">
+            <div id="loading">Loading data...</div>
+            <div id="matrix"></div>
+        </div>
+
+        <div class="tooltip" id="tooltip"></div>
+
+        <footer>
+            <p>
+                <small>Concurrence rate = proportion of cases where both justices voted on the same side (majority or dissent)</small>
+            </p>
+            <p class="citation">
+                <strong>Data Citation:</strong> Harold J. Spaeth, Lee Epstein, et al. Supreme Court Database,
+                Version 2025 Release 01 and Legacy 07.
+                <a href="https://scdb.la.psu.edu/" target="_blank">scdb.la.psu.edu</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
