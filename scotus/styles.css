@@ -162,6 +162,14 @@ header .subtitle {
     font-size: 1rem;
 }
 
+.term-note {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-style: italic;
+}
+
 .stats {
     display: flex;
     justify-content: center;
@@ -192,6 +200,12 @@ header .subtitle {
     color: var(--text-muted);
 }
 
+.legend-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .legend-gradient {
     width: 200px;
     height: 16px;
@@ -201,13 +215,11 @@ header .subtitle {
 
 .legend-labels {
     display: flex;
-    gap: 8px;
+    justify-content: space-between;
+    width: 200px;
     font-size: 0.85rem;
     color: var(--text-muted);
-}
-
-.legend-labels span:nth-child(2) {
-    margin: 0 40px;
+    margin-top: 4px;
 }
 
 /* Matrix Container */
