@@ -129,6 +129,27 @@
     }
 
     /**
+     * Calculate the percentage of cases where each justice was in the majority (vote === 2)
+     */
+    function calculateMajorityRates(cases) {
+        const totals = {};
+        const majorities = {};
+        for (const c of cases) {
+            for (const [justice, vote] of Object.entries(c.votes)) {
+                totals[justice] = (totals[justice] || 0) + 1;
+                if (vote === 2) {
+                    majorities[justice] = (majorities[justice] || 0) + 1;
+                }
+            }
+        }
+        const rates = {};
+        for (const justice of Object.keys(totals)) {
+            rates[justice] = (majorities[justice] || 0) / totals[justice];
+        }
+        return rates;
+    }
+
+    /**
      * Populate the justice dropdown with checkboxes
      */
     function populateJusticeDropdown(cases) {
@@ -351,6 +372,7 @@
 
         const justices = getActiveJustices(cases);
         const matrix = calculateConcurrence(cases, justices);
+        const majorityRates = calculateMajorityRates(cases);
 
         // Update stats
         justiceCountEl.textContent = `${justices.length} justices`;
@@ -388,7 +410,8 @@
                 Math.floor((window.innerWidth - 100 - config.labelPadding * 2) / justices.length)));
 
         const matrixSize = cellSize * justices.length;
-        const width = matrixSize + config.labelPadding * 2;
+        const rightAnnotationWidth = 60;
+        const width = matrixSize + config.labelPadding * 2 + rightAnnotationWidth;
         const height = matrixSize + config.labelPadding * 2;
 
         // Create SVG
@@ -458,6 +481,29 @@
             .attr('text-anchor', 'start')
             .attr('transform', (d, i) => `rotate(-45, ${i * cellSize + cellSize / 2}, -8)`)
             .text(d => formatJusticeName(d));
+
+        // Draw majority-rate annotation on the right side of each row
+        g.selectAll('.majority-label')
+            .data(justices)
+            .enter()
+            .append('text')
+            .attr('class', 'majority-label')
+            .attr('x', matrixSize + 8)
+            .attr('y', (d, i) => i * cellSize + cellSize / 2)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', 'start')
+            .text(d => {
+                const rate = majorityRates[d];
+                return rate != null ? (rate * 100).toFixed(0) + '%' : '';
+            });
+
+        // Column header for the majority annotation
+        g.append('text')
+            .attr('class', 'majority-header')
+            .attr('x', matrixSize + 8 + rightAnnotationWidth / 2 - 8)
+            .attr('y', -8)
+            .attr('text-anchor', 'middle')
+            .text('Maj%');
     }
 
     /**

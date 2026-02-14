@@ -304,6 +304,23 @@ header .subtitle {
     fill: var(--text-color);
 }
 
+/* Majority rate annotation */
+.majority-label {
+    font-size: 10px;
+    fill: var(--accent-color);
+    cursor: default;
+    font-weight: 500;
+}
+
+.majority-header {
+    font-size: 9px;
+    fill: var(--text-muted);
+    cursor: default;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* Tooltip */
 .tooltip {
     position: fixed;
