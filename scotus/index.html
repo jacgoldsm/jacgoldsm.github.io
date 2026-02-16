@@ -57,6 +57,14 @@
                     <input type="number" id="min-cases" min="1" value="1" class="min-cases-input">
                     <span class="filter-hint">per justice pair</span>
                 </div>
+
+                <div class="filter-group">
+                    <label for="sort-order">Sort by:</label>
+                    <select id="sort-order" class="sort-select">
+                        <option value="year">Year Appointed</option>
+                        <option value="party">Party, then Year</option>
+                    </select>
+                </div>
             </div>
 
             <div class="stats" id="stats">
@@ -78,9 +86,17 @@
             </div>
         </div>
 
-        <div class="matrix-container">
-            <div id="loading">Loading data...</div>
-            <div id="matrix"></div>
+        <div class="center-wrapper">
+            <div class="center-wrapper-inner">
+                <div class="matrix-container">
+                    <div id="loading">Loading data...</div>
+                    <div id="matrix"></div>
+                </div>
+
+                <div class="matrix-container" id="tables-container" style="display:none;">
+                    <div id="tables"></div>
+                </div>
+            </div>
         </div>
 
         <div class="tooltip" id="tooltip"></div>
@@ -88,6 +104,9 @@
         <footer>
             <p>
                 <small>Concurrence rate = proportion of cases where both justices voted on the same side (majority or dissent)</small>
+            </p>
+            <p>
+                <small>*Decisive vote = a vote in a case where the outcome would be flipped if that justice had taken the opposite side (i.e., cases decided by one vote with the justice on the winning side, or any tied cases). Each side is labeled by the party whose appointees form a majority on that side.</small>
             </p>
             <p class="citation">
                 <strong>Data Citation:</strong> Harold J. Spaeth, Lee Epstein, et al. Supreme Court Database,

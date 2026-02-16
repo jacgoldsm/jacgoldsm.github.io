@@ -14,10 +14,13 @@
     let yearEnd = 2024;
     let selectedJustices = null; // null = all justices, Set = explicit selection
     let minCases = 1;
+    let sortOrder = 'year'; // 'year' or 'party'
 
     // DOM elements
     const loadingEl = document.getElementById('loading');
     const matrixEl = document.getElementById('matrix');
+    const tablesContainer = document.getElementById('tables-container');
+    const tablesEl = document.getElementById('tables');
     const tooltipEl = document.getElementById('tooltip');
     const yearStartSlider = document.getElementById('year-start');
     const yearEndSlider = document.getElementById('year-end');
@@ -35,6 +38,7 @@
     const selectAllBtn = document.getElementById('select-all');
     const clearAllBtn = document.getElementById('clear-all');
     const minCasesInput = document.getElementById('min-cases');
+    const sortOrderSelect = document.getElementById('sort-order');
 
     // Configuration
     const config = {
@@ -106,8 +110,12 @@
             }
         }
 
-        // Sort by first term (inauguration), then by name
         return Array.from(justiceSet).sort((a, b) => {
+            if (sortOrder === 'party') {
+                const aParty = data.justices[a]?.party || '';
+                const bParty = data.justices[b]?.party || '';
+                if (aParty !== bParty) return aParty.localeCompare(bParty);
+            }
             const aFirst = data.justices[a]?.firstTerm || 0;
             const bFirst = data.justices[b]?.firstTerm || 0;
             if (aFirst !== bFirst) return aFirst - bFirst;
@@ -147,6 +155,113 @@
             rates[justice] = (majorities[justice] || 0) / totals[justice];
         }
         return rates;
+    }
+
+    /**
+     * Calculate coalition size distribution for each justice.
+     * For each case a justice participated in, count how many justices total
+     * (including themselves) voted the same way. Returns an object keyed by
+     * justice ID, where each value is an array of length 10 (indices 0-9)
+     * holding the number of cases with that coalition size, plus a total.
+     */
+    function calculateCoalitionDistributions(cases) {
+        const dist = {}; // justiceId -> [count for size 0, 1, ..., 9]
+        const totals = {};
+        for (const c of cases) {
+            const entries = Object.entries(c.votes);
+            for (const [justice, vote] of entries) {
+                if (!dist[justice]) {
+                    dist[justice] = new Array(10).fill(0);
+                    totals[justice] = 0;
+                }
+                // Count justices on the same side (including self)
+                let sameCount = 0;
+                for (const [, v] of entries) {
+                    if (v === vote) sameCount++;
+                }
+                const bucket = Math.min(sameCount, 9);
+                dist[justice][bucket]++;
+                totals[justice]++;
+            }
+        }
+        return { dist, totals };
+    }
+
+    /**
+     * Calculate swing-vote statistics for each justice.
+     *
+     * A "swing case" is one where the majority won by exactly one vote
+     * (majority_count = dissent_count + 1) or it was a tie
+     * (majority_count = dissent_count). In either scenario a single
+     * justice switching sides would change the outcome.
+     *
+     * For each side of a swing case we determine the dominant party —
+     * the party (R, D, etc.) whose appointees form a strict majority
+     * of that side. Cases where a side has no clear dominant party, or
+     * where both sides share the same dominant party, are skipped.
+     *
+     * A justice on the majority side in a swing case is treated as
+     * decisive (removing them would turn a one-vote win into a tie,
+     * or break a tie the other way).
+     *
+     * Returns an object keyed by justice ID with:
+     *   withPartyWin      – J was on majority, J's party dominates majority
+     *   againstPartyLose  – J was on majority, J's party dominates dissent
+     *   totalSwing        – total swing cases J participated in
+     */
+    function calculateSwingVoteStats(cases) {
+        const stats = {};
+
+        function dominantParty(voters) {
+            const counts = {};
+            for (const [jId] of voters) {
+                const p = data.justices[jId]?.party;
+                if (p) counts[p] = (counts[p] || 0) + 1;
+            }
+            let best = null, bestCount = 0, tied = false;
+            for (const [p, cnt] of Object.entries(counts)) {
+                if (cnt > bestCount) { best = p; bestCount = cnt; tied = false; }
+                else if (cnt === bestCount) { tied = true; }
+            }
+            return tied ? null : best;
+        }
+
+        for (const c of cases) {
+            const entries = Object.entries(c.votes);
+            const majVoters = entries.filter(([, v]) => v === 2);
+            const disVoters = entries.filter(([, v]) => v === 1);
+
+            const margin = majVoters.length - disVoters.length;
+            if (margin > 1 || margin < 0) continue; // not a swing case
+
+            const majParty = dominantParty(majVoters);
+            const disParty = dominantParty(disVoters);
+
+            // Skip if either side has no clear party majority or both
+            // sides are dominated by the same party
+            if (!majParty || !disParty || majParty === disParty) continue;
+
+            for (const [jId, vote] of entries) {
+                if (!stats[jId]) {
+                    stats[jId] = { withPartyWin: 0, againstPartyLose: 0, totalSwing: 0 };
+                }
+                stats[jId].totalSwing++;
+
+                const jParty = data.justices[jId]?.party;
+                if (!jParty) continue;
+
+                // Only majority-side justices are decisive
+                if (vote !== 2) continue;
+
+                if (jParty === majParty) {
+                    stats[jId].withPartyWin++;
+                } else if (jParty === disParty) {
+                    stats[jId].againstPartyLose++;
+                }
+            }
+        }
+
+        return stats;
     }
 
     /**
@@ -290,6 +405,17 @@
     }
 
     /**
+     * Format justice name with party indicator (for table row labels)
+     */
+    function formatJusticeNameWithParty(justiceId) {
+        const info = data.justices[justiceId];
+        if (!info) return justiceId;
+        const party = info.party || '';
+        const partyMarker = party === 'R' ? '(R)' : party === 'D' ? '(D)' : party === 'DR' ? '(DR)' : party === 'F' ? '(F)' : party === 'W' ? '(W)' : '';
+        return partyMarker ? `${info.name} ${partyMarker}` : info.name;
+    }
+
+    /**
      * Calculate concurrence matrix
      */
     function calculateConcurrence(cases, justices) {
@@ -364,6 +490,7 @@
      */
     function renderMatrix() {
         matrixEl.innerHTML = '';
+        tablesEl.innerHTML = '';
 
         const cases = filterCases();
 
@@ -373,6 +500,8 @@
         const justices = getActiveJustices(cases);
         const matrix = calculateConcurrence(cases, justices);
         const majorityRates = calculateMajorityRates(cases);
+        const coalitions = calculateCoalitionDistributions(cases);
+        const swingStats = calculateSwingVoteStats(cases);
 
         // Update stats
         justiceCountEl.textContent = `${justices.length} justices`;
@@ -380,6 +509,7 @@
 
         if (justices.length === 0) {
             matrixEl.innerHTML = '<p style="text-align:center;color:var(--text-muted);">No cases found in this time period.</p>';
+            tablesContainer.style.display = 'none';
             return;
         }
 
@@ -411,14 +541,15 @@
 
         const matrixSize = cellSize * justices.length;
         const rightAnnotationWidth = 60;
-        const width = matrixSize + config.labelPadding * 2 + rightAnnotationWidth;
-        const height = matrixSize + config.labelPadding * 2;
 
-        // Create SVG
+        // --- Matrix SVG (concurrence matrix + Maj%) ---
+        const matrixWidth = matrixSize + config.labelPadding * 2 + rightAnnotationWidth;
+        const matrixHeight = matrixSize + config.labelPadding * 2;
+
         const svg = d3.select(matrixEl)
             .append('svg')
-            .attr('width', width)
-            .attr('height', height);
+            .attr('width', matrixWidth)
+            .attr('height', matrixHeight);
 
         const g = svg.append('g')
             .attr('transform', `translate(${config.labelPadding}, ${config.labelPadding})`);
@@ -504,6 +635,139 @@
             .attr('y', -8)
             .attr('text-anchor', 'middle')
             .text('Maj%');
+
+        // --- Tables SVG (coalition + swing + right-side names) ---
+        tablesContainer.style.display = '';
+
+        const coalitionColWidth = 30;
+        const coalitionCols = 10; // columns 1-9 plus total
+        const coalitionTotalWidth = coalitionColWidth * coalitionCols;
+        const swingColWidth = 50;
+        const swingCols = 3; // Party Win, Party Lose, Defect%
+        const swingTotalWidth = swingColWidth * swingCols + 16; // 16px gap
+        const rightLabelPadding = 120;
+        const tablesLabelPadding = config.labelPadding; // left padding for justice names
+
+        const tablesWidth = tablesLabelPadding + coalitionTotalWidth + swingTotalWidth + rightLabelPadding;
+        const tablesHeaderHeight = 40;
+        const tablesHeight = tablesHeaderHeight + cellSize * justices.length + 10;
+
+        const svg2 = d3.select(tablesEl)
+            .append('svg')
+            .attr('width', tablesWidth)
+            .attr('height', tablesHeight);
+
+        const g2 = svg2.append('g')
+            .attr('transform', `translate(${tablesLabelPadding}, ${tablesHeaderHeight})`);
+
+        // Left-side justice name labels
+        g2.selectAll('.table-row-label')
+            .data(justices)
+            .enter()
+            .append('text')
+            .attr('class', 'axis-label')
+            .attr('x', -8)
+            .attr('y', (d, i) => i * cellSize + cellSize / 2)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', 'end')
+            .text(d => formatJusticeNameWithParty(d));
+
+        // Coalition size distribution columns
+        const coalitionStartX = 0;
+
+        // Section header spanning all coalition columns
+        g2.append('text')
+            .attr('class', 'coalition-section-header')
+            .attr('x', coalitionStartX + (coalitionCols * coalitionColWidth) / 2)
+            .attr('y', -28)
+            .attr('text-anchor', 'middle')
+            .text('# Cases by coalition size (justices on same side, incl. self)');
+
+        // Column headers (1-9, Total)
+        for (let c = 0; c < coalitionCols; c++) {
+            const label = c < 9 ? String(c + 1) : 'Total';
+            g2.append('text')
+                .attr('class', 'coalition-header')
+                .attr('x', coalitionStartX + c * coalitionColWidth + coalitionColWidth / 2)
+                .attr('y', -8)
+                .attr('text-anchor', 'middle')
+                .text(label);
+        }
+
+        // Coalition data rows
+        for (let i = 0; i < justices.length; i++) {
+            const jId = justices[i];
+            const jDist = coalitions.dist[jId] || new Array(10).fill(0);
+            const jTotal = coalitions.totals[jId] || 0;
+
+            for (let c = 0; c < coalitionCols; c++) {
+                const val = c < 9 ? jDist[c + 1] : jTotal;
+                g2.append('text')
+                    .attr('class', c < 9 ? 'coalition-value' : 'coalition-total')
+                    .attr('x', coalitionStartX + c * coalitionColWidth + coalitionColWidth / 2)
+                    .attr('y', i * cellSize + cellSize / 2)
+                    .attr('dy', '0.35em')
+                    .attr('text-anchor', 'middle')
+                    .text(val || '');
+            }
+        }
+
+        // Swing-vote columns
+        const swingStartX = coalitionStartX + coalitionTotalWidth + 16;
+
+        // Section header with footnote marker
+        g2.append('text')
+            .attr('class', 'coalition-section-header')
+            .attr('x', swingStartX + (swingCols * swingColWidth) / 2)
+            .attr('y', -28)
+            .attr('text-anchor', 'middle')
+            .text('Decisive* votes by party alignment');
+
+        // Column headers
+        for (let c = 0; c < swingCols; c++) {
+            const headerText = ['Party Win', 'Party Lose', 'Defect%'][c];
+            g2.append('text')
+                .attr('class', 'coalition-header')
+                .attr('x', swingStartX + c * swingColWidth + swingColWidth / 2)
+                .attr('y', -8)
+                .attr('text-anchor', 'middle')
+                .text(headerText);
+        }
+
+        // Swing data rows
+        for (let i = 0; i < justices.length; i++) {
+            const jId = justices[i];
+            const s = swingStats[jId] || { withPartyWin: 0, againstPartyLose: 0, totalSwing: 0 };
+
+            const vals = [
+                s.withPartyWin || '',
+                s.againstPartyLose || '',
+                s.totalSwing > 0 ? ((s.againstPartyLose / s.totalSwing) * 100).toFixed(0) + '%' : ''
+            ];
+
+            for (let c = 0; c < swingCols; c++) {
+                g2.append('text')
+                    .attr('class', c === 2 ? 'swing-pct' : 'coalition-value')
+                    .attr('x', swingStartX + c * swingColWidth + swingColWidth / 2)
+                    .attr('y', i * cellSize + cellSize / 2)
+                    .attr('dy', '0.35em')
+                    .attr('text-anchor', 'middle')
+                    .text(vals[c]);
+            }
+        }
+
+        // Right-side justice name labels
+        const rightLabelX = swingStartX + swingCols * swingColWidth + 8;
+        g2.selectAll('.right-label')
+            .data(justices)
+            .enter()
+            .append('text')
+            .attr('class', 'axis-label')
+            .attr('x', rightLabelX)
+            .attr('y', (d, i) => i * cellSize + cellSize / 2)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', 'start')
+            .text(d => formatJusticeNameWithParty(d));
     }
 
     /**
@@ -693,6 +957,16 @@
     }
 
     /**
+     * Setup sort order dropdown
+     */
+    function setupSortOrder() {
+        sortOrderSelect.addEventListener('change', () => {
+            sortOrder = sortOrderSelect.value;
+            renderMatrix();
+        });
+    }
+
+    /**
      * Handle window resize
      */
     function setupResize() {
@@ -712,6 +986,7 @@
         setupSliders();
         setupJusticeDropdown();
         setupMinCasesFilter();
+        setupSortOrder();
         setupResize();
         loadData();
     }
